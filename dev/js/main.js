@@ -1,7 +1,7 @@
 var cnv, ctx, draw, h, h2, w, w2, mid;
 cnv = document.getElementById('cnv');
 ctx = cnv.getContext('2d');
-w = cnv.width = 500;
+w = cnv.width = 1600;
 h = cnv.height = 800;
 w2 = w / 2;
 h2 = h / 2;
@@ -13,9 +13,10 @@ ctx.fillRect(0,0,w,h);
 //------------------------
 
 var test = 1;
-var coord1 = {x: w2, y: h-10}; //откуда
+var coord1 = {x: w2, y: h2}; //откуда
 var coord2 = {x: w2, y: 10}; //куда
-var len = 5; // количество сегментов
+var len = 6; // количество сегментов
+var offset = Math.sqrt((coord2.x - coord1.x) * (coord2.x - coord1.x) + (coord2.y - coord1.y) * (coord2.y - coord1.y)) * 0.1; //смещение
 var a = []; //массив сегментов
 var setting = {
   lineWidth: 6,
@@ -30,14 +31,41 @@ var rand = function(min, max) { // случайное число от мин д�
   return min + (Math.random() * (max+1-min) >> 0);
 };
 
-var generateArray = function(a1, a2, seg) { //генерируем сегменты
+function normalize(p1, p2) {
+  var result = {
+    x: p1.x - p2.x,
+    y: p1.y - p2.y
+  };
+  var len = Math.sqrt(result.x * result.x + result.y * result.y);
+  result.x /= len;
+  result.y /= len;
+  return result;
+}
+
+function perp(p) {
+  return {
+    x: p.y * -1,
+    y: p.x
+  };
+}
+var generateArray = function(a1, a2, seg, off) { //генерируем сегменты
   if (seg <= 0) return;
   var m = {
     x: (a1.x + a2.x) / 2,
     y: (a1.y + a2.y) / 2
   };
   // где то тут надо смещать точу m перпендикулярно отрезку a1 - a2
-  m.x += rand(-10*seg, 10*seg);
+  var vec = normalize(a2, a1);
+  vec = perp(vec);
+  var r = rand(-off, off);
+
+  vec.x *= r;
+  vec.y *= r;
+
+  m.x += vec.x;
+  m.y += vec.y;
+
+
   if(seg === 1) {
     var obj = {
       bx: a1.x,
@@ -57,8 +85,8 @@ var generateArray = function(a1, a2, seg) { //генерируем сегмен�
 //     test--;
 //     generateArray(m, split, seg-1);
 //   }
-  generateArray(a1, m, seg-1);
-  generateArray(m, a2, seg-1);
+  generateArray(a1, m, seg-1, off/2);
+  generateArray(m, a2, seg-1, off/2);
 };
 
 
@@ -83,7 +111,8 @@ var drawLightning = function(ctx, array, setting) {
 function draw() {
   ctx.fillRect(0,0,w,h);
   a = [];
-  generateArray(coord2, coord1, len);
+  offset = Math.sqrt((coord2.x - coord1.x) * (coord2.x - coord1.x) + (coord2.y - coord1.y) * (coord2.y - coord1.y)) * 0.1;
+  generateArray(coord2, coord1, len, offset);
   a = a.reverse();
   drawLightning(ctx, a, setting);
   drawLightning(ctx, a, setting2);
@@ -95,3 +124,8 @@ function animloop(){
 }
 
 animloop();
+
+cnv.onmousemove = function(e) {
+  coord2.x = e.offsetX;
+  coord2.y = e.offsetY;
+};

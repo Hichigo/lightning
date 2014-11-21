@@ -1,8 +1,8 @@
 var cnv, ctx, draw, h, h2, w, w2, mid;
 cnv = document.getElementById('cnv');
 ctx = cnv.getContext('2d');
-w = cnv.width = 1600;
-h = cnv.height = 800;
+w = cnv.width = document.body.clientWidth;
+h = cnv.height = document.body.clientHeight;
 w2 = w / 2;
 h2 = h / 2;
 //------------------------
@@ -13,9 +13,9 @@ ctx.fillRect(0,0,w,h);
 //------------------------
 
 var test = 1;
-var coord1 = {x: w2, y: h2}; //откуда
+var coord1 = {x: w2, y: h-10}; //откуда
 var coord2 = {x: w2, y: 10}; //куда
-var len = 6; // количество сегментов
+var len = 7; // количество сегментов
 var offset = Math.sqrt((coord2.x - coord1.x) * (coord2.x - coord1.x) + (coord2.y - coord1.y) * (coord2.y - coord1.y)) * 0.1; //смещение
 var a = []; //массив сегментов
 var setting = {
@@ -24,7 +24,7 @@ var setting = {
 };
 var setting2 = {
   lineWidth: 2,
-  strokeStyle: 'rgb(137, 208, 255)'
+  strokeStyle: 'rgba(137, 208, 255, 1)'
 };
 
 var rand = function(min, max) { // случайное число от мин до макс
@@ -48,13 +48,26 @@ function perp(p) {
     y: p.x
   };
 }
+
+function rotate (x, y, angle) {
+  angle = angle * Math.PI / 180;
+  cosA = Math.cos(angle);
+  sinA = Math.sin(angle);
+  rx = x * cosA - y * sinA;
+  ry = x * sinA + y * cosA;
+  return {
+    x: rx,
+    y: ry
+  };
+}
+
 var generateArray = function(a1, a2, seg, off) { //генерируем сегменты
   if (seg <= 0) return;
   var m = {
     x: (a1.x + a2.x) / 2,
     y: (a1.y + a2.y) / 2
   };
-  // где то тут надо смещать точу m перпендикулярно отрезку a1 - a2
+  
   var vec = normalize(a2, a1);
   vec = perp(vec);
   var r = rand(-off, off);
@@ -64,7 +77,19 @@ var generateArray = function(a1, a2, seg, off) { //генерируем сегм
 
   m.x += vec.x;
   m.y += vec.y;
-
+  if(((Math.random()*10)>>0) <= 3 && seg > 3) {
+    var dir = {
+      x: m.x - a1.x,
+      y: m.y - a1.y,
+    };
+    dir = rotate(dir.x, dir.y, rand(-10, 10));
+    dir.x *= 0.7;
+    dir.y *= 0.7;
+    
+    dir.x += m.x;
+    dir.y += m.y;
+    generateArray(m, dir, seg-1, off/2);
+  }
 
   if(seg === 1) {
     var obj = {
@@ -77,14 +102,6 @@ var generateArray = function(a1, a2, seg, off) { //генерируем сегм
     };
     a.push(obj);
   }
-//   if(seg === len || seg === len-1) {
-//     var split = {
-//       x: m.x + rand(-10*seg, 10*seg),
-//       y: (m.y*2) * 0.7
-//     };
-//     test--;
-//     generateArray(m, split, seg-1);
-//   }
   generateArray(a1, m, seg-1, off/2);
   generateArray(m, a2, seg-1, off/2);
 };
@@ -111,7 +128,10 @@ var drawLightning = function(ctx, array, setting) {
 function draw() {
   ctx.fillRect(0,0,w,h);
   a = [];
-  offset = Math.sqrt((coord2.x - coord1.x) * (coord2.x - coord1.x) + (coord2.y - coord1.y) * (coord2.y - coord1.y)) * 0.1;
+  var k = Math.sqrt((coord2.x - coord1.x) * (coord2.x - coord1.x) + (coord2.y - coord1.y) * (coord2.y - coord1.y));
+  // len = k / 10;
+  offset = k * 0.1;
+
   generateArray(coord2, coord1, len, offset);
   a = a.reverse();
   drawLightning(ctx, a, setting);
@@ -123,9 +143,22 @@ function animloop(){
   draw();
 }
 
-animloop();
+// animloop();
 
 cnv.onmousemove = function(e) {
   coord2.x = e.offsetX;
   coord2.y = e.offsetY;
 };
+
+cnv.onclick = function(e) {
+  draw();
+};
+
+cnv.addEventListener('touchmove', function(event) {
+    coord1.x = event.touches[0].pageX;
+    coord1.y = event.touches[0].pageY;
+  
+    coord2.x = event.touches[1].pageX;
+    coord2.y = event.touches[1].pageY;
+  draw();
+}, false);
